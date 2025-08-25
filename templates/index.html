@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holzbau Document Search</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f4f4f4; 
+            display: flex; 
+            gap: 20px;
+        }
+        .main-content { 
+            flex-grow: 1; 
+            max-width: 800px;
+        }
+        .stats-panel { 
+            width: 300px; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+            height: fit-content;
+        }
+        .container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+        }
+        .search-bar { 
+            display: flex; 
+            margin-bottom: 20px; 
+        }
+        .search-bar input { 
+            flex-grow: 1; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+        }
+        .search-bar button { 
+            padding: 10px 15px; 
+            border: none; 
+            background-color: #007bff; 
+            color: white; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-left: 10px; 
+        }
+        .search-results { 
+            list-style: none; 
+            padding: 0; 
+        }
+        .search-results li { 
+            background: #e9e9e9; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-bottom: 10px; 
+        }
+        .search-results h3 { 
+            margin: 0 0 5px 0; 
+            color: #333; 
+        }
+        .stats-panel h3 { 
+            margin-top: 0; 
+        }
+        .stats-panel ul { 
+            list-style: none; 
+            padding: 0; 
+        }
+        .stats-panel li { 
+            margin-bottom: 5px; 
+        }
+        .figure-container {
+            display: none; /* Initially hide the figure container */
+            margin-top: 10px;
+        }
+        .toggle-button {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="container">
+            <h1>Holzbau Document Search</h1>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Enter your search query...">
+                <button onclick="performSearch()">Search</button>
+            </div>
+            <ul id="searchResults" class="search-results"></ul>
+        </div>
+    </div>
+    
+    <div class="stats-panel">
+        <h3>Statistics</h3>
+        <ul id="statsList"></ul>
+    </div>
+
+    <script>
+        // Function to toggle the visibility of the image container
+        function toggleImages(button, targetId) {
+            const container = document.getElementById(targetId);
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                button.textContent = 'Hide Images';
+            } else {
+                container.style.display = 'none';
+                button.textContent = 'Show Images';
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            const resultsList = document.getElementById('searchResults');
+            const statsList = document.getElementById('statsList');
+            
+            resultsList.innerHTML = '<li>Searching...</li>';
+            statsList.innerHTML = '';
+
+            try {
+                const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                // Handle search results
+                resultsList.innerHTML = ''; 
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach((item, index) => {
+                        const li = document.createElement('li');
+                        const figuresId = `figures-${index}`;
+                        
+                        let figuresHtml = '';
+                        if (item.figures && item.figures.length > 0) {
+                            figuresHtml += `
+                                <button class="toggle-button" onclick="toggleImages(this, '${figuresId}')">Show Images</button>
+                                <div id="${figuresId}" class="figure-container">
+                            `;
+                            item.figures.forEach(figure => {
+                                if (figure.path) {
+                                    const imageFilename = figure.path.split(/[\\/]/).pop();
+                                    figuresHtml += `
+                                        <div style="text-align: center; margin-bottom: 15px;">
+                                            <img src="/images/${imageFilename}" style="max-width: 100%; height: auto; border: 1px solid #ccc;"/>
+                                            <p style="font-style: italic; margin: 5px 0 0;">${figure.title}</p>
+                                        </div>
+                                    `;
+                                } else {
+                                    figuresHtml += `<li>${figure.title} (Image not available)</li>`;
+                                }
+                            });
+                            figuresHtml += '</div>';
+                        }
+
+                        li.innerHTML = `
+                            <h3>${item.filename}</h3>
+                            ${figuresHtml}
+                            <p>${item.content_snippet}</p>
+                        `;
+                        resultsList.appendChild(li);
+                    });
+                } else {
+                    resultsList.innerHTML = '<li>No results found.</li>';
+                }
+
+                // Handle statistics
+                statsList.innerHTML = '';
+                if (data.stats && data.stats.length > 0) {
+                    data.stats.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = `${item.folder}: ${item.doc_count} document(s)`;
+                        statsList.appendChild(li);
+                    });
+                } else {
+                    statsList.innerHTML = '<li>No stats available.</li>';
+                }
+
+            } catch (error) {
+                resultsList.innerHTML = `<li>An error occurred: ${error.message}</li>`;
+                console.error('Search error:', error);
+            }
+        }
+    </script>
+
+</body>
+</html>
