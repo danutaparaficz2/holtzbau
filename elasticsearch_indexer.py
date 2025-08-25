@@ -14,7 +14,7 @@ MAPPING_BODY = {
         "content": {"type": "text"},
         "metadata": {
             "properties": {
-                "filename": {"type": "keyword"}
+                "filename": {"type": "keyword"} # Ensure this line is present
             }
         },
         "folder_name": {"type": "keyword"},

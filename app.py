@@ -44,16 +44,35 @@ def get_dashboard_stats():
         )
         folder_buckets = folder_aggs['aggregations']['top_folders']['buckets']
 
-        # Get file type aggregation data
+        # Get file type aggregation data with a more robust script
         file_type_aggs = es_client.search(
             index=INDEX_NAME,
-            body={"aggs": {"file_types": {"terms": {"script": "doc['metadata.filename.keyword'].value.substring(doc['metadata.filename.keyword'].value.lastIndexOf('.') + 1)"}}}, "size": 0}
+            body={
+                "aggs": {
+                    "file_types": {
+                        "terms": {
+                            "script": {
+                                "source": """
+                                    String filename = doc['metadata.filename.keyword'].value;
+                                    int lastDot = filename.lastIndexOf('.');
+                                    if (lastDot > 0 && lastDot < filename.length() - 1) {
+                                        return filename.substring(lastDot + 1).toUpperCase();
+                                    }
+                                    return 'UNKNOWN';
+                                """,
+                                "lang": "painless"
+                            }
+                        }
+                    }
+                },
+                "size": 0
+            }
         )
         file_type_buckets = file_type_aggs['aggregations']['file_types']['buckets']
 
         # Format data for the frontend
         folder_stats = [{'label': b['key'], 'value': b['doc_count']} for b in folder_buckets]
-        file_type_stats = [{'label': b['key'].upper(), 'value': b['doc_count']} for b in file_type_buckets]
+        file_type_stats = [{'label': b['key'], 'value': b['doc_count']} for b in file_type_buckets]
 
         return jsonify({
             'total_documents': total_docs,

@@ -4,31 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Holzbau Document Search</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { 
             font-family: Arial, sans-serif; 
             margin: 20px; 
             background-color: #f4f4f4; 
-            display: flex; 
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex; /* Use flexbox for side-by-side layout */
             gap: 20px;
         }
-        .main-content { 
-            flex-grow: 1; 
-            max-width: 800px;
-        }
-        .stats-panel { 
-            width: 300px; 
+        .search-container {
+            flex-grow: 1; /* Allows the search container to take up available space */
             background: white; 
             padding: 20px; 
             border-radius: 8px; 
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
             height: fit-content;
         }
-        .container { 
+        .stats-panel {
+            width: 350px; /* Fixed width for the stats panel */
             background: white; 
             padding: 20px; 
             border-radius: 8px; 
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+            height: fit-content;
+            text-align: center;
+        }
+        h1 { 
+            text-align: center;
+            color: #1e3a8a;
+            margin-bottom: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #1e3a8a;
+        }
+        h3 {
+            font-size: 1.2em;
+            color: #333;
+            margin: 0 0 10px 0;
         }
         .search-bar { 
             display: flex; 
@@ -63,18 +81,8 @@
             margin: 0 0 5px 0; 
             color: #333; 
         }
-        .stats-panel h3 { 
-            margin-top: 0; 
-        }
-        .stats-panel ul { 
-            list-style: none; 
-            padding: 0; 
-        }
-        .stats-panel li { 
-            margin-bottom: 5px; 
-        }
         .figure-container {
-            display: none; /* Initially hide the figure container */
+            display: none; 
             margin-top: 10px;
         }
         .toggle-button {
@@ -84,12 +92,21 @@
             cursor: pointer;
             border-radius: 4px;
         }
+        .stats-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        .stats-list li {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="main-content">
-        <div class="container">
+    <div class="main-container">
+        
+        <div class="search-container">
             <h1>Holzbau Document Search</h1>
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Enter your search query...">
@@ -97,15 +114,22 @@
             </div>
             <ul id="searchResults" class="search-results"></ul>
         </div>
-    </div>
-    
-    <div class="stats-panel">
-        <h3>Statistics</h3>
-        <ul id="statsList"></ul>
+        
+        <div class="stats-panel">
+            <h2>Statistics</h2>
+            <div class="chart-container">
+                <canvas id="topFoldersChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="documentTypeChart"></canvas>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // Function to toggle the visibility of the image container
+        let documentTypeChart, topFoldersChart;
+
         function toggleImages(button, targetId) {
             const container = document.getElementById(targetId);
             if (container.style.display === 'none') {
@@ -117,19 +141,109 @@
             }
         }
 
+        async function fetchAndRenderDashboardStats() {
+            try {
+                const response = await fetch('/dashboard-stats');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Update Document Type Chart
+                if (documentTypeChart) {
+                    documentTypeChart.destroy();
+                }
+                const docLabels = data.file_type_stats.map(stat => stat.label);
+                const docValues = data.file_type_stats.map(stat => stat.value);
+                documentTypeChart = createPieChart('documentTypeChart', docLabels, docValues);
+
+                // Update Top Folders Chart
+                if (topFoldersChart) {
+                    topFoldersChart.destroy();
+                }
+                const folderLabels = data.folder_stats.map(stat => stat.label);
+                const folderValues = data.folder_stats.map(stat => stat.value);
+                topFoldersChart = createBarChart('topFoldersChart', folderLabels, folderValues);
+
+            } catch (error) {
+                console.error("Failed to fetch dashboard stats:", error);
+            }
+        }
+
+        function createPieChart(canvasId, labels, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const colors = ['#42a5f5', '#66bb6a', '#ffb74d', '#ef5350', '#bdbdbd'];
+            return new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Document Type',
+                        data: data,
+                        backgroundColor: colors,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: false,
+                        }
+                    }
+                }
+            });
+        }
+
+        function createBarChart(canvasId, labels, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const colors = ['#42a5f5', '#66bb6a', '#ffb74d', '#ef5350', '#bdbdbd'];
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Document Count',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors.map(color => color.replace('0.2', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
         async function performSearch() {
             const query = document.getElementById('searchInput').value;
             const resultsList = document.getElementById('searchResults');
-            const statsList = document.getElementById('statsList');
             
             resultsList.innerHTML = '<li>Searching...</li>';
-            statsList.innerHTML = '';
 
             try {
                 const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
                 const data = await response.json();
 
-                // Handle search results
                 resultsList.innerHTML = ''; 
                 if (data.results && data.results.length > 0) {
                     data.results.forEach((item, index) => {
@@ -169,23 +283,14 @@
                     resultsList.innerHTML = '<li>No results found.</li>';
                 }
 
-                // Handle statistics
-                statsList.innerHTML = '';
-                if (data.stats && data.stats.length > 0) {
-                    data.stats.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = `${item.folder}: ${item.doc_count} document(s)`;
-                        statsList.appendChild(li);
-                    });
-                } else {
-                    statsList.innerHTML = '<li>No stats available.</li>';
-                }
-
             } catch (error) {
                 resultsList.innerHTML = `<li>An error occurred: ${error.message}</li>`;
                 console.error('Search error:', error);
             }
         }
+        
+        // Fetch dashboard stats on page load
+        fetchAndRenderDashboardStats();
     </script>
 
 </body>
