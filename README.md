@@ -1,4 +1,3 @@
-Of course. Here is a comprehensive README file for your project, summarizing its purpose, setup instructions, and key features.
 
 # Holzbau Document Search
 
