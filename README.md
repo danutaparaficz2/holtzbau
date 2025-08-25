@@ -6,7 +6,7 @@
 This project is a sophisticated document search engine designed to demonstrate a proof of concept for a company's internal knowledge base. It allows users to search for documents using hybrid search, which combines keyword matching with AI-powered semantic understanding. The system provides rich results, including text snippets, folder statistics, and extracted figures with their titles and images. The project utilizes a full-stack approach with Python, Elasticsearch, and Flask.
 
 The entire system is based on a data-driven funnel, transforming raw files into a structured, searchable knowledge base.
-<img width="101" height="188" alt="_- visual selection" src="https://github.com/user-attachments/assets/d1f56ca2-3c38-4248-9214-6609c29ec2ae" />
+<img width="301" height="388" alt="_- visual selection" src="https://github.com/user-attachments/assets/d1f56ca2-3c38-4248-9214-6609c29ec2ae" />
 
 
 Given a 200 GB PDF dataset, the time it would take to prepare and index the data on your Mac is difficult to estimate precisely, but we can make an informed projection. The total time depends heavily on three main factors: **disk I/O speed**, **CPU processing power**, and **network bandwidth** to Elasticsearch.
