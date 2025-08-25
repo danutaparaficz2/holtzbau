@@ -61,7 +61,7 @@ In a realistic scenario, with a typical mix of simple and complex PDF files, you
     Navigate to your project directory and install the necessary dependencies:
 
     ```bash
-    pip install Flask elasticsearch PyMuPDF python-docx Pillow
+    pip install Flask elasticsearch PyMuPDF python-docx Pillow sentence-transformers
     ```
 
 3.  **Install and Run Elasticsearch**
