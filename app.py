@@ -1,10 +1,14 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from elasticsearch import Elasticsearch
+from sentence_transformers import SentenceTransformer
 
 # Configure Elasticsearch client
 es_client = Elasticsearch("http://localhost:9200")
 INDEX_NAME = "innocheque_documents"
+
+# Load the same model used for indexing
+model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -33,13 +37,34 @@ def search():
     if not query:
         return jsonify(results=[], stats=[])
 
-    # Construct the search query with an aggregation
+    # Generate an embedding for the user's query
+    query_vector = model.encode(query).tolist()
+
+    # Construct the hybrid search query
     search_body = {
         "query": {
-            # Use multi_match to search content and figure titles
-            "multi_match": {
-                "query": query,
-                "fields": ["content", "figures.title"]
+            "bool": {
+                "should": [
+                    {  # Keyword search
+                        "query_string": {
+                            "query": query,
+                            "fields": ["content", "figures.title"]
+                        }
+                    },
+                    {  # Semantic search using knn
+                        "script_score": {
+                            "query": {
+                                "match_all": {}
+                            },
+                            "script": {
+                                "source": "cosineSimilarity(params.query_vector, 'content_vector') + 1.0",
+                                "params": {
+                                    "query_vector": query_vector
+                                }
+                            }
+                        }
+                    }
+                ]
             }
         },
         "aggs": {

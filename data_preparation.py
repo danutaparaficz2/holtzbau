@@ -110,6 +110,20 @@ def extract_content_from_file(file_path):
         print(f"Skipping unsupported file type: {file_path}")
         return "", []
 
+from sentence_transformers import SentenceTransformer
+
+# Load a pre-trained sentence transformer model
+# This model is multilingual, making it a great choice for your data.
+model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+
+def create_embedding(text):
+    """
+    Generates a dense vector embedding for the given text.
+    """
+    if not text:
+        return []
+    return model.encode(text).tolist()
+
 def prepare_data_for_indexing(directory_path, output_file='prepared_data.json'):
     """
     Walks through a directory, extracts content from supported files, and saves it to a JSON file.
@@ -135,6 +149,9 @@ def prepare_data_for_indexing(directory_path, output_file='prepared_data.json'):
                     img_path = image_paths[i] if i < len(image_paths) else None
                     if img_path:
                         figures.append({"title": title, "path": img_path})
+                        
+                # New: Generate the embedding for the content
+                content_vector = create_embedding(content)
 
                 document = {
                     "content": content,
@@ -143,7 +160,9 @@ def prepare_data_for_indexing(directory_path, output_file='prepared_data.json'):
                         "file_path": file_path
                     },
                     "folder_name": folder_name,
-                    "figures": figures 
+                    "figures": figures,
+                    "content_vector": content_vector # Add the new vector field
+
                 }
                 data_list.append(document)
 
