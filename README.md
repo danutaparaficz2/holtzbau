@@ -34,6 +34,7 @@ In a realistic scenario, with a typical mix of simple and complex PDF files, you
 
 ## 🚀 Key Features
 
+  * **Hybrid Search:** Combines traditional keyword search with a semantic search model (paraphrase-multilingual-MiniLM-L12-v2) for more accurate and relevant results.
   * **Full-Text Search:** Search for keywords across document content.
   * **Figure Search:** Find relevant figures by searching for keywords in their titles.
   * **Dynamic Image Display:** View extracted figures directly in the search results, with a toggle button to keep the UI clean.
