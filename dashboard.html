@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-house Search Engine Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #1e3a8a;
+        }
+        .chart-container {
+            height: 400px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .total-docs {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            color: #1e3a8a;
+        }
+        .section-heading {
+            text-align: center;
+            margin: 40px 0 20px;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+        .pie-chart-container {
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Search System Dashboard</h1>
+
+    <div class="dashboard-container">
+        
+        <div class="card">
+            <h2>Total Documents Indexed</h2>
+            <div class="total-docs" id="total-documents">Loading...</div>
+            <p style="text-align: center; color: #666;">(Source: Elasticsearch Index)</p>
+        </div>
+
+        <div class="card">
+            <h2>Average Indexing Speed</h2>
+            <div class="total-docs" id="indexing-speed">N/A</div>
+            <p style="text-align: center; color: #666;">(Source: Pipeline Logs)</p>
+        </div>
+
+    </div>
+
+    <div class="section-heading">Data Distribution Statistics</div>
+    
+    <div class="dashboard-container">
+        <div class="card">
+            <h2>Document Type Distribution</h2>
+            <div class="pie-chart-container">
+                <canvas id="documentTypeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Top Folders</h2>
+            <div class="chart-container">
+                <canvas id="topFoldersChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let documentTypeChart, topFoldersChart;
+
+        async function fetchAndRenderDashboardStats() {
+            try {
+                const response = await fetch('/dashboard-stats');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Update total documents
+                document.getElementById('total-documents').textContent = data.total_documents;
+
+                // Update Document Type Chart
+                if (documentTypeChart) {
+                    documentTypeChart.destroy();
+                }
+                const docLabels = data.file_type_stats.map(stat => stat.label);
+                const docValues = data.file_type_stats.map(stat => stat.value);
+                documentTypeChart = createPieChart('documentTypeChart', docLabels, docValues);
+
+                // Update Top Folders Chart
+                if (topFoldersChart) {
+                    topFoldersChart.destroy();
+                }
+                const folderLabels = data.folder_stats.map(stat => stat.label);
+                const folderValues = data.folder_stats.map(stat => stat.value);
+                topFoldersChart = createBarChart('topFoldersChart', folderLabels, folderValues);
+
+            } catch (error) {
+                console.error("Failed to fetch dashboard stats:", error);
+                document.getElementById('total-documents').textContent = "Error";
+            }
+        }
+
+        function createPieChart(canvasId, labels, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const colors = ['#42a5f5', '#66bb6a', '#ffb74d', '#ef5350', '#bdbdbd'];
+            return new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Document Type',
+                        data: data,
+                        backgroundColor: colors,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Document Type Distribution'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createBarChart(canvasId, labels, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const colors = ['#42a5f5', '#66bb6a', '#ffb74d', '#ef5350', '#bdbdbd'];
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Document Count',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors.map(color => color.replace('0.2', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Top Folders'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch stats on page load and then every 5 minutes
+        fetchAndRenderDashboardStats();
+        setInterval(fetchAndRenderDashboardStats, 300000); // 300000 ms = 5 minutes
+    </script>
+
+</body>
+</html>
