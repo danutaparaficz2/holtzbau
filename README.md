@@ -50,7 +50,7 @@ In a realistic scenario, with a typical mix of simple and complex PDF files, you
 
   * Python 3.x
   * Elasticsearch (version 8.x is recommended)
-  * Required Python libraries: `flask`, `elasticsearch`, `pymupdf`, `python-docx`, `pillow`
+  * Required Python libraries: `flask`, `elasticsearch`, `pymupdf`, `python-docx`, `pillow`, `sentence-transformers`
 
 ### Step-by-Step Guide
 
