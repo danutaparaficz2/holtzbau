@@ -15,13 +15,15 @@ model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 # Initialize Flask application
 app = Flask(__name__)
 
+# Function to get file extension in a safe way
+def get_file_extension(filename):
+    if '.' in filename:
+        return filename.rsplit('.', 1)[1].upper()
+    return 'UNKNOWN'
+
 @app.route('/')
 def index():
     return render_template('index.html')
-
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html')
 
 @app.route('/images/<path:filename>')
 def serve_image(filename):
@@ -30,7 +32,7 @@ def serve_image(filename):
 @app.route('/dashboard-stats')
 def get_dashboard_stats():
     """
-    Returns statistics from the Elasticsearch index for the dashboard.
+    Returns statistics from the Elasticsearch index.
     """
     try:
         # Get total document count
@@ -44,35 +46,21 @@ def get_dashboard_stats():
         )
         folder_buckets = folder_aggs['aggregations']['top_folders']['buckets']
 
-        # Get file type aggregation data with a more robust script
-        file_type_aggs = es_client.search(
+        # Get all documents and process them in Python to get file types
+        all_docs_search = es_client.search(
             index=INDEX_NAME,
-            body={
-                "aggs": {
-                    "file_types": {
-                        "terms": {
-                            "script": {
-                                "source": """
-                                    String filename = doc['metadata.filename.keyword'].value;
-                                    int lastDot = filename.lastIndexOf('.');
-                                    if (lastDot > 0 && lastDot < filename.length() - 1) {
-                                        return filename.substring(lastDot + 1).toUpperCase();
-                                    }
-                                    return 'UNKNOWN';
-                                """,
-                                "lang": "painless"
-                            }
-                        }
-                    }
-                },
-                "size": 0
-            }
+            body={"query": {"match_all": {}}, "_source": ["metadata.filename"], "size": 10000}
         )
-        file_type_buckets = file_type_aggs['aggregations']['file_types']['buckets']
-
+        
+        file_type_counts = {}
+        for hit in all_docs_search['hits']['hits']:
+            filename = hit['_source']['metadata']['filename']
+            file_type = get_file_extension(filename)
+            file_type_counts[file_type] = file_type_counts.get(file_type, 0) + 1
+        
         # Format data for the frontend
         folder_stats = [{'label': b['key'], 'value': b['doc_count']} for b in folder_buckets]
-        file_type_stats = [{'label': b['key'], 'value': b['doc_count']} for b in file_type_buckets]
+        file_type_stats = [{'label': key, 'value': value} for key, value in file_type_counts.items()]
 
         return jsonify({
             'total_documents': total_docs,
@@ -95,7 +83,6 @@ def search():
 
     query_vector = model.encode(query).tolist()
 
-    # The query no longer includes aggregations
     search_body = {
         "query": {
             "bool": {
@@ -139,8 +126,6 @@ def search():
                 'figures': source.get('figures', [])
             })
 
-        # The 'stats' part of the response will now always be empty.
-        # Your frontend should be updated to handle this, as the stats are now on the dashboard.
         return jsonify(results=results, stats=[])
 
     except Exception as e:

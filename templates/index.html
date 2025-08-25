@@ -34,6 +34,27 @@
             height: fit-content;
             text-align: center;
         }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 20px; /* Adds space between the cards and the charts */
+        }
+        .stats-card {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .stats-card h3 {
+            margin-top: 0;
+            color: #1e3a8a;
+        }
+        .total-docs-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #007bff;
+        }
         h1 { 
             text-align: center;
             color: #1e3a8a;
@@ -92,14 +113,6 @@
             cursor: pointer;
             border-radius: 4px;
         }
-        .stats-list {
-            list-style: none;
-            padding: 0;
-            text-align: left;
-        }
-        .stats-list li {
-            margin-bottom: 5px;
-        }
     </style>
 </head>
 <body>
@@ -117,6 +130,12 @@
         
         <div class="stats-panel">
             <h2>Statistics</h2>
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <h3>Total Documents</h3>
+                    <div id="total-documents" class="total-docs-number">0</div>
+                </div>
+            </div>
             <div class="chart-container">
                 <canvas id="topFoldersChart"></canvas>
             </div>
@@ -149,6 +168,9 @@
                 if (data.error) {
                     throw new Error(data.error);
                 }
+
+                // Update total documents count
+                document.getElementById('total-documents').textContent = data.total_documents;
 
                 // Update Document Type Chart
                 if (documentTypeChart) {
