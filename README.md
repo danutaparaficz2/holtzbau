@@ -7,6 +7,29 @@ This project is a sophisticated document search engine designed to demonstrate a
 
 The entire system is based on a **data-driven funnel**, transforming raw files into a structured, searchable knowledge base.
 
+
+Given a 200 GB PDF dataset, the time it would take to prepare and index the data on your Mac is difficult to estimate precisely, but we can make an informed projection. The total time depends heavily on three main factors: **disk I/O speed**, **CPU processing power**, and **network bandwidth** to Elasticsearch.
+
+---
+
+### Key Factors Affecting the Timeline
+
+* **PDF Processing:** Extracting text and especially images from PDFs is **the most time-consuming part** of the process. On a modern Mac (M1/M2/M3 chip with an SSD), a single multi-page PDF might take anywhere from a few seconds to a few minutes, depending on its complexity (e.g., number of images, quality of text). The average processing speed could be around **1-5 MB/s**. At this rate, processing 200 GB of data would take approximately **11 to 55 hours**.
+* **Indexing:** The bulk indexing process is much faster. Once the data is in the JSON format, Elasticsearch can ingest it very quickly. On a local network, you can expect an indexing speed of **10-50 MB/s**. This part of the process would likely take **1 to 6 hours**.
+* **Overhead:** This includes Python script startup time, file system traversal, and small latencies. While generally a minor factor, it can add up over a large dataset.
+
+---
+
+### Estimated Time Breakdown
+
+| Process | Estimated Speed | Time Calculation | Projected Time |
+| :--- | :--- | :--- | :--- |
+| **Data Processing** | 1-5 MB/s | (200,000 MB) / (1-5 MB/s) | **~11 to 55 hours** |
+| **Indexing** | 10-50 MB/s | (200,000 MB) / (10-50 MB/s) | **~1 to 6 hours** |
+| **Total Estimated Time** | | | **~12 to 61 hours** |
+
+In a realistic scenario, with a typical mix of simple and complex PDF files, you should expect the entire process to take **at least 2 days** of continuous operation. The most significant bottleneck will be the `data_preprocessing.py` script due to the intensive I/O and CPU operations involved in parsing and extracting data from each individual file.
+
 -----
 
 ## 🚀 Key Features
